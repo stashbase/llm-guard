@@ -99,6 +99,8 @@ const messages = [
   { role: 'assistant', content: [{ type: 'text', text: 'world' }] },
 ]
 
-guardAny(messages)
+guardAny(messages, {
+  onResult: () => {},
+})
 const res = await scanAny(messages)
 ```

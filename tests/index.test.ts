@@ -42,7 +42,7 @@ const callChatRouteWithGuard = async (message: string, openai: OpenAIChatClientL
   } as never)
 
   const output = aiRes.choices[0]?.message?.content ?? ''
-  await guard(() => output)
+  await guard(() => output, { onResult: () => {} })
 
   return { message: output }
 }
@@ -161,7 +161,7 @@ describe('guard + OpenAI prompt flow', () => {
     })
 
     const onError = vi.fn()
-    await guard('secret sk-test', { onError })
+    await guard('secret sk-test', { onResult: () => {}, onError })
     await new Promise((resolve) => setTimeout(resolve, 0))
 
     expect(onError).toHaveBeenCalledTimes(1)
@@ -174,7 +174,7 @@ describe('guard + OpenAI prompt flow', () => {
     sendApiRequestMock.mockRejectedValue(thrownError)
 
     const onError = vi.fn()
-    await guard('secret sk-test', { onError })
+    await guard('secret sk-test', { onResult: () => {}, onError })
     await new Promise((resolve) => setTimeout(resolve, 0))
 
     expect(onError).toHaveBeenCalledTimes(1)
@@ -197,7 +197,7 @@ describe('guard + OpenAI prompt flow', () => {
         })
     )
 
-    await guard('pending scan')
+    await guard('pending scan', { onResult: () => {} })
     const onFlushed = vi.fn()
     const flushPromise = flush().then(onFlushed)
 
@@ -241,7 +241,7 @@ describe('guard + OpenAI prompt flow', () => {
       error: null,
     })
 
-    await guard(['text1', 'text2'])
+    await guard(['text1', 'text2'], { onResult: () => {} })
     await new Promise((resolve) => setTimeout(resolve, 0))
 
     expect(sendApiRequestMock).toHaveBeenCalledWith({
@@ -267,7 +267,7 @@ describe('guard + OpenAI prompt flow', () => {
       { role: 'assistant', content: [{ type: 'text', text: 'world' }] },
     ]
 
-    const normalized = await guardAny(messages)
+    const normalized = await guardAny(messages, { onResult: () => {} })
     await new Promise((resolve) => setTimeout(resolve, 0))
 
     expect(normalized).toEqual(['hello', 'world'])
@@ -378,7 +378,7 @@ describe('guard + OpenAI prompt flow', () => {
       error: null,
     })
 
-    await guard('text1', { sampleRate: 0 })
+    await guard('text1', { onResult: () => {}, sampleRate: 0 })
     await new Promise((resolve) => setTimeout(resolve, 0))
 
     expect(sendApiRequestMock).not.toHaveBeenCalled()
@@ -392,7 +392,7 @@ describe('guard + OpenAI prompt flow', () => {
       error: null,
     })
 
-    await guard('text1')
+    await guard('text1', { onResult: () => {} })
     await new Promise((resolve) => setTimeout(resolve, 0))
 
     expect(sendApiRequestMock).not.toHaveBeenCalled()
@@ -406,7 +406,7 @@ describe('guard + OpenAI prompt flow', () => {
       error: null,
     })
 
-    await guard('text1', { sampleRate: Number.NaN as unknown as number })
+    await guard('text1', { onResult: () => {}, sampleRate: Number.NaN as unknown as number })
     await new Promise((resolve) => setTimeout(resolve, 0))
 
     expect(sendApiRequestMock).toHaveBeenCalledTimes(1)

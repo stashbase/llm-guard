@@ -41,7 +41,7 @@ type ScanTextApiResponse = {
 
 export type GuardOptions<TContext = Record<string, unknown>> = {
   ignoreHashes?: string[]
-  onResult?: (res: ScanResult, context: TContext | undefined) => void
+  onResult: (res: ScanResult, context: TContext | undefined) => void
   onError?: (error: unknown, context: TContext | undefined) => void
   context?: TContext
   sampleRate?: number // value between 0 and 1, default = 1
@@ -115,13 +115,18 @@ const resolveInput = async (
   return typeof input === 'function' ? await input() : input
 }
 
+type ClientOverrides = {
+  apiKey?: string
+  baseUrl?: string
+  timeoutMs?: number
+  retries?: number
+}
+
 const toTexts = (input: string | string[]) => {
   return Array.isArray(input) ? input.map(String) : [String(input)]
 }
 
-const createLocalClient = <TContext = Record<string, unknown>>(
-  options?: GuardOptions<TContext>
-) => {
+const createLocalClient = (options?: ClientOverrides) => {
   if (!options?.apiKey) {
     return null
   }
@@ -169,7 +174,7 @@ function mapResponse(res: any): ScanResult {
  */
 export async function guard<TContext = Record<string, unknown>>(
   input: string | string[] | (() => string | string[] | Promise<string | string[]>),
-  options: GuardOptions<TContext> = {}
+  options: GuardOptions<TContext>
 ): Promise<string | string[]> {
   let result: string | string[]
   try {
@@ -201,9 +206,7 @@ export async function guard<TContext = Record<string, unknown>>(
     .then((res) => {
       if (res.ok && res.data) {
         if (res.data.hasSecret) {
-          if (options.onResult) {
-            options.onResult(res.data, options.context)
-          }
+          options.onResult(res.data, options.context)
         }
         return
       }
@@ -230,7 +233,7 @@ export async function guard<TContext = Record<string, unknown>>(
  */
 export async function guardAny<TContext = Record<string, unknown>>(
   input: unknown | (() => unknown | Promise<unknown>),
-  options: GuardOptions<TContext> = {}
+  options: GuardOptions<TContext>
 ): Promise<string[]> {
   if (typeof input === 'function') {
     const normalized = await guard(async () => extractTexts(await input()), options)

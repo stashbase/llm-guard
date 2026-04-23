@@ -27,6 +27,7 @@ describe('guard inline config', () => {
     const { guard } = await loadGuardModule(sendApiRequestMock)
 
     await guard('hello', {
+      onResult: () => {},
       apiKey: 'inline-api-key',
       baseUrl: 'https://api.example.test',
       timeoutMs: 2500,
@@ -76,7 +77,7 @@ describe('guard inline config', () => {
     const sendApiRequestMock = vi.fn()
     const { guard } = await loadGuardModule(sendApiRequestMock)
 
-    await expect(guard('hello')).resolves.toBe('hello')
+    await expect(guard('hello', { onResult: () => {} })).resolves.toBe('hello')
     expect(sendApiRequestMock).not.toHaveBeenCalled()
   })
 
@@ -89,7 +90,7 @@ describe('guard inline config', () => {
     await expect(
       guard(() => {
         throw inputError
-      }, { onError })
+      }, { onResult: () => {}, onError })
     ).rejects.toThrow('input failed')
     expect(onError).toHaveBeenCalledTimes(1)
     expect(onError).toHaveBeenCalledWith(inputError, undefined)
@@ -100,7 +101,7 @@ describe('guard inline config', () => {
     const sendApiRequestMock = vi.fn()
     const { guard, scan } = await loadGuardModule(sendApiRequestMock)
 
-    await expect(guard(['', '   '])).resolves.toEqual(['', '   '])
+    await expect(guard(['', '   '], { onResult: () => {} })).resolves.toEqual(['', '   '])
     const scanRes = await scan(['', '   '])
 
     expect(scanRes).toEqual({ ok: true, data: null, error: null })
