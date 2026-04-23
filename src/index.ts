@@ -86,7 +86,7 @@ async function scanText(
 
   const res = await activeClient.sendApiRequest<ScanTextApiResponse>({
     method: 'POST',
-    path: '/scan/text',
+    path: '/v1/scan/text',
     data: {
       texts,
       ignore_hashes: ignoreHashes,
