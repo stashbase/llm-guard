@@ -96,6 +96,12 @@ describe('guard with OpenAI types', () => {
         void guard(() => content, {
           onResult(res) {
             console.log('Guard result:', res)
+
+            for (const r of res.findings) {
+              console.log(
+                `Finding: ${r.preview} (severity: ${r.severity}, category: ${r.category}), range: ${r.range.startLine}-${r.range.endLine} in text index ${r.textIndex}`
+              )
+            }
             resolve({ type: 'result', payload: res })
           },
           onError(err) {
