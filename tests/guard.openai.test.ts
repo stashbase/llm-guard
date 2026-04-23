@@ -78,7 +78,7 @@ describe('guard with OpenAI types', () => {
         {
           message: {
             content:
-              'Another API Key we use: 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',
+              'Some preamble text here.\nMore context and details.\nAdditional information before the secret.\nAnother API Key we use: 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',
           },
         },
       ],
