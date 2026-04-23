@@ -20,6 +20,22 @@ export type ScanResult = {
   findings: ScanFinding[]
 }
 
+type ScanTextApiResponse = {
+  has_leak: boolean
+  findings: Array<{
+    text_index: number
+    category: string
+    severity: 'low' | 'medium' | 'high' | 'critical'
+    preview: string
+    value_sha256: string
+    range: {
+      start_line: number
+      end_line: number
+    }
+    value?: string
+  }>
+}
+
 export type GuardOptions = {
   async?: boolean // default true
   ignoreHashes?: string[]
@@ -29,16 +45,26 @@ export type GuardOptions = {
 // --- internal config ---
 type GuardConfig = {
   apiKey: string
+  enabled?: boolean
   baseUrl?: string
   timeoutMs?: number
   retries?: number
 }
 
 let config: GuardConfig | null = null
+let client: HttpClient | null = null
 
 // --- init ---
 export function initGuard(input: GuardConfig) {
   config = input
+  client = new HttpClient({
+    baseUrl: input.baseUrl,
+    timeoutMs: input.timeoutMs,
+    retries: input.retries,
+    authorization: {
+      apiKey: input.apiKey,
+    },
+  })
 }
 
 // --- internal request (uses your copied HTTP layer) ---
@@ -50,16 +76,11 @@ async function scanText(
     throw new Error('llm-guard not initialized. Call initGuard({ apiKey }) first.')
   }
 
-  const client = new HttpClient({
-    baseUrl: config.baseUrl,
-    timeoutMs: config.timeoutMs,
-    retries: config.retries,
-    authorization: {
-      apiKey: config.apiKey,
-    },
-  })
+  if (!client) {
+    throw new Error('llm-guard not initialized. Call initGuard({ apiKey }) first.')
+  }
 
-  const res = await client.sendApiRequest<ScanResult>({
+  const res = await client.sendApiRequest<ScanTextApiResponse>({
     method: 'POST',
     path: '/scan/text',
     data: {
@@ -100,6 +121,11 @@ export async function guard(
   options: GuardOptions = {}
 ) {
   const result = typeof input === 'function' ? await input() : input
+
+  if (config?.enabled === false) {
+    return result
+  }
+
   const texts = Array.isArray(result) ? result.map(String) : [String(result)]
   const isAsync = options.async !== false
 
@@ -112,8 +138,8 @@ export async function guard(
             options.onResult(res.data)
           } else {
             console.warn(
-              '⚠️ Potential secrets leak:',
-              res.data.findings.map((f) => `${f.category} (${f.preview})`).join(', ')
+              '⚠️ Potential secret leak detected:',
+              res.data.findings.map((f) => `${f.category}: ${f.preview}`).join(', ')
             )
           }
         }
@@ -124,13 +150,17 @@ export async function guard(
   }
 
   // blocking mode
-  const res = await scanText(texts, options.ignoreHashes)
+  try {
+    const res = await scanText(texts, options.ignoreHashes)
 
-  if (res.data && res.data.hasLeak) {
-    console.warn(
-      '⚠️ Potential secrets leak:',
-      res.data.findings.map((f) => `${f.category} (${f.preview})`).join(', ')
-    )
+    if (res.data && res.data.hasLeak) {
+      console.warn(
+        '⚠️ Potential secret leak detected:',
+        res.data.findings.map((f) => `${f.category}: ${f.preview}`).join(', ')
+      )
+    }
+  } catch {
+    // swallow error
   }
 
   return result
