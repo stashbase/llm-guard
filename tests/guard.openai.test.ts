@@ -2,14 +2,11 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import type OpenAI from 'openai'
 import { guard, initGuard } from '../src/index'
 
-// helper to flush async guard
-const flush = () => new Promise(process.nextTick)
-
 describe('guard with OpenAI types', () => {
   beforeEach(() => {
     initGuard({
       apiKey: process.env.LLM_GUARD_API_KEY ?? '',
-      baseUrl: 'http://localhost:3000', // or mocked backend
+      baseUrl: 'http://localhost:5000', // or mocked backend
     })
   })
 
@@ -30,15 +27,20 @@ describe('guard with OpenAI types', () => {
 
     const content = openaiResponse.choices[0]?.message?.content ?? ''
 
-    await guard(() => content, {
-      onResult(res) {
-        expect(res.hasLeak).toBe(true)
-      },
-      onError(err) {
-        console.log('Guard error:', err)
-      },
+    await new Promise<void>((resolve) => {
+      void guard(() => content, {
+        apiKey: process.env.LLM_GUARD_API_KEY ?? '',
+        onResult(res) {
+          console.log(res)
+          expect(res.hasLeak).toBe(true)
+          resolve()
+        },
+        onError(err) {
+          console.log('Guard error:', err)
+          resolve()
+        },
+      })
     })
-    await flush()
 
     warnSpy.mockRestore()
   })
