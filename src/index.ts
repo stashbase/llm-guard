@@ -1,132 +1,142 @@
+import { HttpClient } from './http/client'
+import { ApiResponse } from './http/response'
+
+// --- types ---
 export type ScanFinding = {
-  text_index: number;
-  category: string;
-  severity: "low" | "medium" | "high" | "critical";
-  preview: string;
-  value_sha256: string;
+  textIndex: number
+  category: string
+  severity: 'low' | 'medium' | 'high' | 'critical'
+  preview: string
+  valueSha256: string
   range: {
-    start_line: number;
-    end_line: number;
-  };
-  value?: string;
-};
+    startLine: number
+    endLine: number
+  }
+  value?: string
+}
 
 export type ScanResult = {
-  has_leak: boolean;
-  findings: ScanFinding[];
-};
+  hasLeak: boolean
+  findings: ScanFinding[]
+}
 
 export type GuardOptions = {
-  async?: boolean; // default true
-  ignoreHashes?: string[];
-  onResult?: (res: ScanResult) => void;
-};
-
-export type InitOptions = {
-  apiKey: string;
-  baseUrl?: string;
-  timeoutMs?: number;
-};
-
-let globalConfig: InitOptions | null = null;
-
-export function initGuard(config: InitOptions) {
-  globalConfig = {
-    baseUrl: "https://api.stashbase.dev",
-    timeoutMs: 5000,
-    ...config,
-  };
+  async?: boolean // default true
+  ignoreHashes?: string[]
+  onResult?: (res: ScanResult) => void
 }
 
-// --- internal request (copied/minimal from your SDK style) ---
-async function request(path: string, body: any): Promise<ScanResult> {
-  if (!globalConfig) {
-    throw new Error(
-      "llm-guard not initialized. Call initGuard({ apiKey }) first.",
-    );
-  }
-
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), globalConfig.timeoutMs);
-
-  try {
-    const res = await fetch(`${globalConfig.baseUrl}${path}`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${globalConfig.apiKey}`,
-      },
-      body: JSON.stringify(body),
-      signal: controller.signal,
-    });
-
-    return await res.json();
-  } finally {
-    clearTimeout(timeout);
-  }
+// --- internal config ---
+type GuardConfig = {
+  apiKey: string
+  baseUrl?: string
+  timeoutMs?: number
+  retries?: number
 }
 
-// --- core API call ---
+let config: GuardConfig | null = null
+
+// --- init ---
+export function initGuard(input: GuardConfig) {
+  config = input
+}
+
+// --- internal request (uses your copied HTTP layer) ---
 async function scanText(
   texts: string[],
-  ignoreHashes?: string[],
-): Promise<ScanResult> {
-  return request("/scan/text", {
-    texts,
-    ignore_hashes: ignoreHashes,
-  });
+  ignoreHashes?: string[]
+): Promise<ApiResponse<ScanResult, any>> {
+  if (!config) {
+    throw new Error('llm-guard not initialized. Call initGuard({ apiKey }) first.')
+  }
+
+  const client = new HttpClient({
+    baseUrl: config.baseUrl,
+    timeoutMs: config.timeoutMs,
+    retries: config.retries,
+    authorization: {
+      apiKey: config.apiKey,
+    },
+  })
+
+  const res = await client.sendApiRequest<ScanResult>({
+    method: 'POST',
+    path: '/scan/text',
+    data: {
+      texts,
+      ignore_hashes: ignoreHashes,
+    },
+  })
+
+  if (res.ok && res.data) {
+    return { ok: true, error: null, data: mapResponse(res.data) }
+  }
+
+  return { ok: false, error: res.error, data: null }
 }
 
-// --- main guard ---
+// --- camelCase mapping ---
+function mapResponse(res: any): ScanResult {
+  return {
+    hasLeak: res.has_leak,
+    findings: res.findings.map((f: any) => ({
+      textIndex: f.text_index,
+      category: f.category,
+      severity: f.severity,
+      preview: f.preview,
+      valueSha256: f.value_sha256,
+      range: {
+        startLine: f.range?.start_line ?? 1,
+        endLine: f.range?.end_line ?? 1,
+      },
+      value: f.value,
+    })),
+  }
+}
+
+// --- core guard ---
 export async function guard(
-  input: string | string[] | (() => string | Promise<string | string[]>),
-  options: GuardOptions = {},
+  input: string | string[] | (() => string | string[] | Promise<string | string[]>),
+  options: GuardOptions = {}
 ) {
-  const result = typeof input === "function" ? await input() : input;
-
-  const texts = Array.isArray(result) ? result.map(String) : [String(result)];
-
-  const isAsync = options.async !== false;
+  const result = typeof input === 'function' ? await input() : input
+  const texts = Array.isArray(result) ? result.map(String) : [String(result)]
+  const isAsync = options.async !== false
 
   if (isAsync) {
     // fire-and-forget
     scanText(texts, options.ignoreHashes)
       .then((res) => {
-        if (res.has_leak) {
+        if (res.ok && res.data && res.data.hasLeak) {
           if (options.onResult) {
-            options.onResult(res);
+            options.onResult(res.data)
           } else {
             console.warn(
-              "⚠️ Potential secret leak:",
-              res.findings
-                .map((f) => `${f.category} (${f.preview})`)
-                .join(", "),
-            );
+              '⚠️ Potential secrets leak:',
+              res.data.findings.map((f) => `${f.category} (${f.preview})`).join(', ')
+            )
           }
         }
       })
-      .catch(() => {});
+      .catch(() => {})
 
-    return result;
+    return result
   }
 
-  // blocking mode (rare)
-  const res = await scanText(texts, options.ignoreHashes);
+  // blocking mode
+  const res = await scanText(texts, options.ignoreHashes)
 
-  if (res.has_leak) {
+  if (res.data && res.data.hasLeak) {
     console.warn(
-      "⚠️ Potential secret leak:",
-      res.findings.map((f) => `${f.category} (${f.preview})`).join(", "),
-    );
+      '⚠️ Potential secrets leak:',
+      res.data.findings.map((f) => `${f.category} (${f.preview})`).join(', ')
+    )
   }
 
-  return result;
+  return result
 }
 
-// --- optional helper ---
-export async function sanitize(
-  text: string | string[],
-  options?: GuardOptions,
-) {
-  return guard(text, options);
+// --- helper ---
+export async function sanitize(input: string | string[], options?: GuardOptions) {
+  return guard(input, options)
 }
