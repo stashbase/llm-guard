@@ -1,0 +1,50 @@
+{
+  "name": "@stashbase/llm-guard",
+  "version": "0.1.0",
+  "description": "Stashbase LLM Guard",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/stashbase/llm-guard.git"
+  },
+  "homepage": "https://github.com/stashbase/llm-guard#readme",
+  "bugs": {
+    "url": "https://github.com/stashbase/llm-guard/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE.txt"
+  ],
+  "scripts": {
+    "test": "vitest --run",
+    "coverage": "vitest run --coverage",
+    "build": "tsup --config tsup.config.ts",
+    "prepack": "npm run build"
+  },
+  "keywords": [],
+  "author": "Stashbase",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^25.6.0",
+    "@typescript-eslint/eslint-plugin": "8.58.2",
+    "@typescript-eslint/parser": "8.58.2",
+    "eslint": "10.2.0",
+    "tsup": "8.5.1",
+    "typescript": "6.0.3",
+    "vitest": "4.1.5"
+  },
+  "dependencies": {}
+}
