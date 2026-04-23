@@ -72,7 +72,7 @@ describe('guard + OpenAI prompt flow', () => {
     expect(sendApiRequestMock).toHaveBeenCalledTimes(1)
     expect(sendApiRequestMock).toHaveBeenCalledWith({
       method: 'POST',
-      path: '/scan/text',
+      path: '/v1/scan/text',
       data: {
         texts: [prompt],
         ignore_hashes: undefined,
@@ -219,7 +219,7 @@ describe('guard + OpenAI prompt flow', () => {
 
     expect(sendApiRequestMock).toHaveBeenCalledWith({
       method: 'POST',
-      path: '/scan/text',
+      path: '/v1/scan/text',
       data: {
         texts: ['text1', 'text2'],
         ignore_hashes: undefined,
@@ -273,7 +273,7 @@ describe('guard + OpenAI prompt flow', () => {
     expect(sendApiRequestMock).toHaveBeenCalledTimes(2)
     expect(sendApiRequestMock).toHaveBeenNthCalledWith(1, {
       method: 'POST',
-      path: '/scan/text',
+      path: '/v1/scan/text',
       data: {
         texts: ['my secret is sk-test-123'],
         ignore_hashes: undefined,
@@ -281,7 +281,7 @@ describe('guard + OpenAI prompt flow', () => {
     })
     expect(sendApiRequestMock).toHaveBeenNthCalledWith(2, {
       method: 'POST',
-      path: '/scan/text',
+      path: '/v1/scan/text',
       data: {
         texts: ['Safe model output'],
         ignore_hashes: undefined,

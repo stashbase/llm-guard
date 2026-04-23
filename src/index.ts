@@ -127,17 +127,19 @@ const createLocalClient = (options?: GuardOptions) => {
 
 // --- camelCase mapping ---
 function mapResponse(res: any): ScanResult {
+  const findings = Array.isArray(res.findings) ? res.findings : []
+
   return {
-    hasLeak: res.has_leak,
-    findings: res.findings.map((f: any) => ({
-      textIndex: f.text_index,
+    hasLeak: (res.has_leak ?? res.hasLeak) === true,
+    findings: findings.map((f: any) => ({
+      textIndex: f.text_index ?? f.textIndex,
       category: f.category,
       severity: f.severity,
       preview: f.preview,
-      valueSha256: f.value_sha256,
+      valueSha256: f.value_sha256 ?? f.valueSha256,
       range: {
-        startLine: f.range?.start_line ?? 1,
-        endLine: f.range?.end_line ?? 1,
+        startLine: f.range?.start_line ?? f.range?.startLine ?? 1,
+        endLine: f.range?.end_line ?? f.range?.endLine ?? 1,
       },
       value: f.value,
     })),

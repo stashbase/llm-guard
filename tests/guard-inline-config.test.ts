@@ -37,7 +37,7 @@ describe('guard inline config', () => {
     expect(sendApiRequestMock).toHaveBeenCalledTimes(1)
     expect(sendApiRequestMock).toHaveBeenCalledWith({
       method: 'POST',
-      path: '/scan/text',
+      path: '/v1/scan/text',
       data: {
         texts: ['hello'],
         ignore_hashes: undefined,
@@ -64,7 +64,7 @@ describe('guard inline config', () => {
     expect(sendApiRequestMock).toHaveBeenCalledTimes(1)
     expect(sendApiRequestMock).toHaveBeenCalledWith({
       method: 'POST',
-      path: '/scan/text',
+      path: '/v1/scan/text',
       data: {
         texts: ['hello'],
         ignore_hashes: undefined,
