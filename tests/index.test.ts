@@ -11,7 +11,7 @@ vi.mock('../src/http/client', () => {
   }
 })
 
-import { guard, initGuard, scan } from '../src/index'
+import { flush, guard, initGuard, scan } from '../src/index'
 
 type OpenAIClientLike = Pick<OpenAI, 'responses'>
 type OpenAIChatClientLike = Pick<OpenAI, 'chat'>
@@ -179,6 +179,33 @@ describe('guard + OpenAI prompt flow', () => {
 
     expect(onError).toHaveBeenCalledTimes(1)
     expect(onError).toHaveBeenCalledWith(thrownError, undefined)
+  })
+
+  it('flush waits for in-flight guard scans to settle', async () => {
+    initGuard({ apiKey: 'guard-key' })
+    let resolveRequest!: () => void
+    sendApiRequestMock.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveRequest = () => {
+            resolve({
+              ok: true,
+              data: { has_secret: false, findings: [] },
+              error: null,
+            })
+          }
+        })
+    )
+
+    await guard('pending scan')
+    const onFlushed = vi.fn()
+    const flushPromise = flush().then(onFlushed)
+
+    await Promise.resolve()
+    expect(onFlushed).not.toHaveBeenCalled()
+    resolveRequest()
+    await flushPromise
+    expect(onFlushed).toHaveBeenCalledTimes(1)
   })
 
   it('blocks execution until scan completes in sync mode', async () => {

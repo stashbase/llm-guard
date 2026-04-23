@@ -61,6 +61,8 @@ await guard('User prompt text', {
 - `scan(input, options?)`
   - Blocking scan.
   - Returns `{ ok, data, error }`.
+- `flush()`
+  - Waits for all in-flight `guard()` scans to settle.
 - `extractTexts(input)`
   - Optional utility for normalizing common LLM message formats into `string[]`.
 
@@ -71,3 +73,14 @@ await guard('User prompt text', {
   - `string[]`
   - `() => string | string[] | Promise<string | string[]>`
 - If using inline options (`apiKey`, `baseUrl`, etc.), global initialization is optional.
+
+## Graceful Shutdown
+
+```ts
+import { flush } from '@stashbase/llm-guard'
+
+process.on('SIGTERM', async () => {
+  await flush()
+  process.exit(0)
+})
+```

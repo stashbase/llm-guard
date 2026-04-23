@@ -62,6 +62,7 @@ type GuardConfig = {
 
 let config: GuardConfig | null = null
 let client: HttpClient | null = null
+const pendingScans = new Set<Promise<void>>()
 
 /**
  * Initializes global SDK configuration used by `guard` and `scan`.
@@ -194,7 +195,8 @@ export async function guard<TContext = Record<string, unknown>>(
   }
 
   // fire-and-forget
-  scanText(texts, options.ignoreHashes, localClient ?? undefined)
+  let trackedScan: Promise<void>
+  trackedScan = scanText(texts, options.ignoreHashes, localClient ?? undefined)
     .then((res) => {
       if (res.ok && res.data) {
         if (res.data.hasSecret) {
@@ -210,6 +212,10 @@ export async function guard<TContext = Record<string, unknown>>(
     .catch((err) => {
       options.onError?.(err, options.context)
     })
+    .finally(() => {
+      pendingScans.delete(trackedScan)
+    })
+  pendingScans.add(trackedScan)
 
   return result
 }
@@ -255,4 +261,21 @@ export async function scan(
   } catch (error) {
     return { ok: false, data: null, error }
   }
+}
+
+/**
+ * Waits for all currently in-flight `guard()` scan tasks to settle.
+ *
+ * Useful for graceful shutdowns where background scan requests should be drained.
+ *
+ * @example
+ * ```ts
+ * process.on('SIGTERM', async () => {
+ *   await flush()
+ *   process.exit(0)
+ * })
+ * ```
+ */
+export async function flush(): Promise<void> {
+  await Promise.allSettled([...pendingScans])
 }
