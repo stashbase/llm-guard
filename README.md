@@ -34,6 +34,22 @@ if (result.ok && result.data?.hasSecret) {
 }
 ```
 
+## Context Example
+
+```ts
+await guard('User prompt text', {
+  context: { chatId: 'chat-123', userId: 42 },
+  onResult: (res, ctx) => {
+    if (res.hasSecret) {
+      console.log('secret detected in chat', ctx?.chatId, 'for user', ctx?.userId)
+    }
+  },
+  onError: (err, ctx) => {
+    console.error('guard failed for', ctx?.chatId, err)
+  },
+})
+```
+
 ## API
 
 - `initGuard(config)`
