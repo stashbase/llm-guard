@@ -40,6 +40,10 @@ export type GuardOptions = {
   async?: boolean // default true
   ignoreHashes?: string[]
   onResult?: (res: ScanResult) => void
+  apiKey?: string
+  baseUrl?: string
+  timeoutMs?: number
+  retries?: number
 }
 
 // --- internal config ---
@@ -70,17 +74,15 @@ export function initGuard(input: GuardConfig) {
 // --- internal request (uses your copied HTTP layer) ---
 async function scanText(
   texts: string[],
-  ignoreHashes?: string[]
+  ignoreHashes?: string[],
+  overrideClient?: HttpClient
 ): Promise<ApiResponse<ScanResult, any>> {
-  if (!config) {
+  const activeClient = overrideClient ?? client
+  if (!activeClient) {
     throw new Error('llm-guard not initialized. Call initGuard({ apiKey }) first.')
   }
 
-  if (!client) {
-    throw new Error('llm-guard not initialized. Call initGuard({ apiKey }) first.')
-  }
-
-  const res = await client.sendApiRequest<ScanTextApiResponse>({
+  const res = await activeClient.sendApiRequest<ScanTextApiResponse>({
     method: 'POST',
     path: '/scan/text',
     data: {
@@ -128,10 +130,24 @@ export async function guard(
 
   const texts = Array.isArray(result) ? result.map(String) : [String(result)]
   const isAsync = options.async !== false
+  const localClient = options.apiKey
+    ? new HttpClient({
+        baseUrl: options.baseUrl,
+        timeoutMs: options.timeoutMs,
+        retries: options.retries,
+        authorization: {
+          apiKey: options.apiKey,
+        },
+      })
+    : null
+
+  if (!localClient && !client) {
+    throw new Error('llm-guard not initialized. Call initGuard({ apiKey }) first.')
+  }
 
   if (isAsync) {
     // fire-and-forget
-    scanText(texts, options.ignoreHashes)
+    scanText(texts, options.ignoreHashes, localClient ?? undefined)
       .then((res) => {
         if (res.ok && res.data && res.data.hasLeak) {
           if (options.onResult) {
@@ -151,7 +167,7 @@ export async function guard(
 
   // blocking mode
   try {
-    const res = await scanText(texts, options.ignoreHashes)
+    const res = await scanText(texts, options.ignoreHashes, localClient ?? undefined)
 
     if (res.data && res.data.hasLeak) {
       console.warn(
