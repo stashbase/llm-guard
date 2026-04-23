@@ -56,7 +56,7 @@ describe('guard + OpenAI prompt flow', () => {
     initGuard({ apiKey: 'guard-key' })
     sendApiRequestMock.mockResolvedValue({
       ok: true,
-      data: { hasLeak: false, findings: [] },
+      data: { has_leak: false, findings: [] },
       error: null,
     })
 
@@ -120,6 +120,81 @@ describe('guard + OpenAI prompt flow', () => {
     expect(openai.responses.create).toHaveBeenCalledWith({
       model: 'gpt-4o-mini',
       input: prompt,
+    })
+  })
+
+  it('calls onResult when leak is detected in async mode', async () => {
+    initGuard({ apiKey: 'guard-key' })
+    sendApiRequestMock.mockResolvedValue({
+      ok: true,
+      data: {
+        has_leak: true,
+        findings: [
+          {
+            text_index: 0,
+            category: 'api_key',
+            severity: 'high',
+            preview: 'sk-***',
+            value_sha256: 'abc123',
+            range: { start_line: 1, end_line: 1 },
+          },
+        ],
+      },
+      error: null,
+    })
+
+    const onResult = vi.fn()
+    await guard('secret sk-test', { onResult })
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(onResult).toHaveBeenCalledTimes(1)
+    expect(onResult.mock.calls[0][0].hasLeak).toBe(true)
+  })
+
+  it('blocks execution until scan completes in sync mode', async () => {
+    initGuard({ apiKey: 'guard-key' })
+    const order: string[] = []
+
+    sendApiRequestMock.mockImplementation(async () => {
+      order.push('scan')
+      return {
+        ok: true,
+        data: { has_leak: false, findings: [] },
+        error: null,
+      }
+    })
+
+    await guard(
+      () => {
+        order.push('input')
+        return 'hello'
+      },
+      { async: false }
+    )
+
+    order.push('after')
+
+    expect(order).toEqual(['input', 'scan', 'after'])
+  })
+
+  it('passes array inputs to scan endpoint', async () => {
+    initGuard({ apiKey: 'guard-key' })
+    sendApiRequestMock.mockResolvedValue({
+      ok: true,
+      data: { has_leak: false, findings: [] },
+      error: null,
+    })
+
+    await guard(['text1', 'text2'])
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(sendApiRequestMock).toHaveBeenCalledWith({
+      method: 'POST',
+      path: '/scan/text',
+      data: {
+        texts: ['text1', 'text2'],
+        ignore_hashes: undefined,
+      },
     })
   })
 
