@@ -227,6 +227,20 @@ describe('guard + OpenAI prompt flow', () => {
     })
   })
 
+  it('skips scanning when sampleRate is 0', async () => {
+    initGuard({ apiKey: 'guard-key' })
+    sendApiRequestMock.mockResolvedValue({
+      ok: true,
+      data: { has_secret: false, findings: [] },
+      error: null,
+    })
+
+    await guard('text1', { sampleRate: 0 })
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(sendApiRequestMock).not.toHaveBeenCalled()
+  })
+
   it('guards user input and model output in chat flow', async () => {
     initGuard({ apiKey: 'guard-key' })
     sendApiRequestMock

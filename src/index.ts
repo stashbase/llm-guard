@@ -43,6 +43,7 @@ export type GuardOptions = {
   ignoreHashes?: string[]
   onResult?: (res: ScanResult) => void
   onError?: (error: unknown) => void
+  sampleRate?: number // value between 0 and 1, default = 1
   apiKey?: string
   baseUrl?: string
   timeoutMs?: number
@@ -167,6 +168,10 @@ export async function guard(
 
   const texts = toTexts(result).filter((t) => t.trim().length > 0)
   if (texts.length === 0) {
+    return result
+  }
+  const rate = Math.max(0, Math.min(1, options.sampleRate ?? 1))
+  if (rate < 1 && Math.random() > rate) {
     return result
   }
 
