@@ -61,6 +61,10 @@ await guard('User prompt text', {
 - `scan(input, options?)`
   - Blocking scan.
   - Returns `{ ok, data, error }`.
+- `guardAny(input, options?)`
+  - Non-blocking scan for unknown/structured LLM payloads (auto-normalizes with `extractTexts`).
+- `scanAny(input, options?)`
+  - Blocking scan for unknown/structured LLM payloads (auto-normalizes with `extractTexts`).
 - `flush()`
   - Waits for all in-flight `guard()` scans to settle.
 - `extractTexts(input)`
@@ -83,4 +87,18 @@ process.on('SIGTERM', async () => {
   await flush()
   process.exit(0)
 })
+```
+
+## Auto-normalized Input Helpers
+
+```ts
+import { guardAny, scanAny } from '@stashbase/llm-guard'
+
+const messages = [
+  { role: 'user', content: 'hello' },
+  { role: 'assistant', content: [{ type: 'text', text: 'world' }] },
+]
+
+await guardAny(messages)
+const res = await scanAny(messages)
 ```

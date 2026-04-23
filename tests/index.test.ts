@@ -11,7 +11,7 @@ vi.mock('../src/http/client', () => {
   }
 })
 
-import { flush, guard, initGuard, scan } from '../src/index'
+import { flush, guard, guardAny, initGuard, scan, scanAny } from '../src/index'
 
 type OpenAIClientLike = Pick<OpenAI, 'responses'>
 type OpenAIChatClientLike = Pick<OpenAI, 'chat'>
@@ -249,6 +249,55 @@ describe('guard + OpenAI prompt flow', () => {
       path: '/v1/scan/text',
       data: {
         texts: ['text1', 'text2'],
+        ignore_hashes: undefined,
+      },
+    })
+  })
+
+  it('guardAny normalizes message input before scanning', async () => {
+    initGuard({ apiKey: 'guard-key' })
+    sendApiRequestMock.mockResolvedValue({
+      ok: true,
+      data: { has_secret: false, findings: [] },
+      error: null,
+    })
+
+    const messages = [
+      { role: 'user', content: 'hello' },
+      { role: 'assistant', content: [{ type: 'text', text: 'world' }] },
+    ]
+
+    const normalized = await guardAny(messages)
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(normalized).toEqual(['hello', 'world'])
+    expect(sendApiRequestMock).toHaveBeenCalledWith({
+      method: 'POST',
+      path: '/v1/scan/text',
+      data: {
+        texts: ['hello', 'world'],
+        ignore_hashes: undefined,
+      },
+    })
+  })
+
+  it('scanAny normalizes message input before blocking scan', async () => {
+    initGuard({ apiKey: 'guard-key' })
+    sendApiRequestMock.mockResolvedValue({
+      ok: true,
+      data: { has_secret: false, findings: [] },
+      error: null,
+    })
+
+    const messages = [{ role: 'user', content: 'hello from scanAny' }]
+    const res = await scanAny(messages)
+
+    expect(res.ok).toBe(true)
+    expect(sendApiRequestMock).toHaveBeenCalledWith({
+      method: 'POST',
+      path: '/v1/scan/text',
+      data: {
+        texts: ['hello from scanAny'],
         ignore_hashes: undefined,
       },
     })

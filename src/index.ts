@@ -1,5 +1,6 @@
 import { HttpClient } from './http/client'
 import { ApiResponse } from './http/response'
+import { extractTexts } from './normalize'
 export { extractTexts } from './normalize'
 
 const NOT_INITIALIZED_ERROR =
@@ -221,6 +222,26 @@ export async function guard<TContext = Record<string, unknown>>(
 }
 
 /**
+ * Convenience wrapper for `guard` that first normalizes unknown LLM-like inputs via `extractTexts`.
+ *
+ * @param input - Unknown input or resolver for unknown input.
+ * @param options - Guard behavior options, callbacks, and optional inline client config.
+ * @returns Normalized text array.
+ */
+export async function guardAny<TContext = Record<string, unknown>>(
+  input: unknown | (() => unknown | Promise<unknown>),
+  options: GuardOptions<TContext> = {}
+): Promise<string[]> {
+  if (typeof input === 'function') {
+    const normalized = await guard(async () => extractTexts(await input()), options)
+    return normalized as string[]
+  }
+
+  const normalized = await guard(extractTexts(input), options)
+  return normalized as string[]
+}
+
+/**
  * Runs blocking secret scanning and returns API-style output.
  *
  * No callback hooks are used in this mode.
@@ -261,6 +282,34 @@ export async function scan(
   } catch (error) {
     return { ok: false, data: null, error }
   }
+}
+
+/**
+ * Convenience wrapper for `scan` that first normalizes unknown LLM-like inputs via `extractTexts`.
+ *
+ * @param input - Unknown input or resolver for unknown input.
+ * @param options - Scan options with optional inline client config.
+ * @returns `{ ok, data, error }` where `data` is present only when `ok` is true.
+ */
+export async function scanAny(
+  input: unknown | (() => unknown | Promise<unknown>),
+  options: {
+    ignoreHashes?: string[]
+    apiKey?: string
+    baseUrl?: string
+    timeoutMs?: number
+    retries?: number
+  } = {}
+): Promise<{
+  ok: boolean
+  data: ScanResult | null
+  error: unknown
+}> {
+  if (typeof input === 'function') {
+    return scan(async () => extractTexts(await input()), options)
+  }
+
+  return scan(extractTexts(input), options)
 }
 
 /**
