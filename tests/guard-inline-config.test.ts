@@ -27,12 +27,12 @@ describe('guard inline config', () => {
     const { guard } = await loadGuardModule(sendApiRequestMock)
 
     await guard('hello', {
-      async: false,
       apiKey: 'inline-api-key',
       baseUrl: 'https://api.example.test',
       timeoutMs: 2500,
       retries: 2,
     })
+    await new Promise((resolve) => setTimeout(resolve, 0))
 
     expect(sendApiRequestMock).toHaveBeenCalledTimes(1)
     expect(sendApiRequestMock).toHaveBeenCalledWith({
@@ -45,13 +45,11 @@ describe('guard inline config', () => {
     })
   })
 
-  it('throws when neither initGuard nor inline apiKey is provided', async () => {
+  it('does not throw when neither initGuard nor inline apiKey is provided', async () => {
     const sendApiRequestMock = vi.fn()
     const { guard } = await loadGuardModule(sendApiRequestMock)
 
-    await expect(guard('hello')).rejects.toThrow(
-      'llm-guard not initialized. Call initGuard({ apiKey }) first.'
-    )
+    await expect(guard('hello')).resolves.toBe('hello')
     expect(sendApiRequestMock).not.toHaveBeenCalled()
   })
 })

@@ -34,6 +34,9 @@ describe('guard with OpenAI types', () => {
       onResult(res) {
         expect(res.hasLeak).toBe(true)
       },
+      onError(err) {
+        console.log('Guard error:', err)
+      },
     })
     await flush()
 

@@ -11,17 +11,17 @@ vi.mock('../src/http/client', () => {
   }
 })
 
-import { guard, initGuard } from '../src/index'
+import { guard, initGuard, scan } from '../src/index'
 
 type OpenAIClientLike = Pick<OpenAI, 'responses'>
 type OpenAIChatClientLike = Pick<OpenAI, 'chat'>
 
 const callOpenAIWithGuard = async (prompt: string, openai: OpenAIClientLike) => {
-  const scannedPrompt = await guard(prompt, { async: false })
+  await scan(prompt)
 
   await openai.responses.create({
     model: 'gpt-4o-mini',
-    input: scannedPrompt,
+    input: prompt,
   } as never)
 }
 
@@ -151,6 +151,36 @@ describe('guard + OpenAI prompt flow', () => {
     expect(onResult.mock.calls[0][0].hasLeak).toBe(true)
   })
 
+  it('calls onError when async scan returns API failure response', async () => {
+    initGuard({ apiKey: 'guard-key' })
+    const apiError = { code: 'server.unavailable', message: 'temporary outage' }
+    sendApiRequestMock.mockResolvedValue({
+      ok: false,
+      data: null,
+      error: apiError,
+    })
+
+    const onError = vi.fn()
+    await guard('secret sk-test', { onError })
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(onError).toHaveBeenCalledTimes(1)
+    expect(onError).toHaveBeenCalledWith(apiError)
+  })
+
+  it('calls onError when async scan throws', async () => {
+    initGuard({ apiKey: 'guard-key' })
+    const thrownError = new Error('network down')
+    sendApiRequestMock.mockRejectedValue(thrownError)
+
+    const onError = vi.fn()
+    await guard('secret sk-test', { onError })
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(onError).toHaveBeenCalledTimes(1)
+    expect(onError).toHaveBeenCalledWith(thrownError)
+  })
+
   it('blocks execution until scan completes in sync mode', async () => {
     initGuard({ apiKey: 'guard-key' })
     const order: string[] = []
@@ -164,12 +194,11 @@ describe('guard + OpenAI prompt flow', () => {
       }
     })
 
-    await guard(
+    await scan(
       () => {
         order.push('input')
         return 'hello'
-      },
-      { async: false }
+      }
     )
 
     order.push('after')

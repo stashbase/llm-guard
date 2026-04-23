@@ -37,9 +37,9 @@ type ScanTextApiResponse = {
 }
 
 export type GuardOptions = {
-  async?: boolean // default true
   ignoreHashes?: string[]
   onResult?: (res: ScanResult) => void
+  onError?: (error: unknown) => void
   apiKey?: string
   baseUrl?: string
   timeoutMs?: number
@@ -98,6 +98,31 @@ async function scanText(
   return { ok: false, error: res.error, data: null }
 }
 
+const resolveInput = async (
+  input: string | string[] | (() => string | string[] | Promise<string | string[]>)
+) => {
+  return typeof input === 'function' ? await input() : input
+}
+
+const toTexts = (input: string | string[]) => {
+  return Array.isArray(input) ? input.map(String) : [String(input)]
+}
+
+const createLocalClient = (options?: GuardOptions) => {
+  if (!options?.apiKey) {
+    return null
+  }
+
+  return new HttpClient({
+    baseUrl: options.baseUrl,
+    timeoutMs: options.timeoutMs,
+    retries: options.retries,
+    authorization: {
+      apiKey: options.apiKey,
+    },
+  })
+}
+
 // --- camelCase mapping ---
 function mapResponse(res: any): ScanResult {
   return {
@@ -117,39 +142,31 @@ function mapResponse(res: any): ScanResult {
   }
 }
 
-// --- core guard ---
+// --- core guard (non-blocking) ---
 export async function guard(
   input: string | string[] | (() => string | string[] | Promise<string | string[]>),
   options: GuardOptions = {}
-) {
-  const result = typeof input === 'function' ? await input() : input
+): Promise<string | string[]> {
+  let result: string | string[]
+  try {
+    result = await resolveInput(input)
+  } catch (err) {
+    options.onError?.(err)
+    return ''
+  }
 
   if (config?.enabled === false) {
     return result
   }
 
-  const texts = Array.isArray(result) ? result.map(String) : [String(result)]
-  const isAsync = options.async !== false
-  const localClient = options.apiKey
-    ? new HttpClient({
-        baseUrl: options.baseUrl,
-        timeoutMs: options.timeoutMs,
-        retries: options.retries,
-        authorization: {
-          apiKey: options.apiKey,
-        },
-      })
-    : null
+  const texts = toTexts(result)
+  const localClient = createLocalClient(options)
 
-  if (!localClient && !client) {
-    throw new Error('llm-guard not initialized. Call initGuard({ apiKey }) first.')
-  }
-
-  if (isAsync) {
-    // fire-and-forget
-    scanText(texts, options.ignoreHashes, localClient ?? undefined)
-      .then((res) => {
-        if (res.ok && res.data && res.data.hasLeak) {
+  // fire-and-forget
+  scanText(texts, options.ignoreHashes, localClient ?? undefined)
+    .then((res) => {
+      if (res.ok && res.data) {
+        if (res.data.hasLeak) {
           if (options.onResult) {
             options.onResult(res.data)
           } else {
@@ -159,28 +176,44 @@ export async function guard(
             )
           }
         }
-      })
-      .catch(() => {})
+        return
+      }
 
-    return result
-  }
-
-  // blocking mode
-  try {
-    const res = await scanText(texts, options.ignoreHashes, localClient ?? undefined)
-
-    if (res.data && res.data.hasLeak) {
-      console.warn(
-        '⚠️ Potential secret leak detected:',
-        res.data.findings.map((f) => `${f.category}: ${f.preview}`).join(', ')
-      )
-    }
-  } catch {
-    // swallow error
-  }
+      options.onError?.(res.error)
+    })
+    .catch((err) => {
+      options.onError?.(err)
+    })
 
   return result
 }
+
+export async function scan(
+  input: string | string[] | (() => string | string[] | Promise<string | string[]>),
+  options: {
+    ignoreHashes?: string[]
+  } = {}
+): Promise<{
+  ok: boolean
+  data: ScanResult | null
+  error: unknown
+}> {
+  try {
+    const result = await resolveInput(input)
+
+    if (config?.enabled === false) {
+      return { ok: true, data: null, error: null }
+    }
+
+    const texts = toTexts(result)
+    const res = await scanText(texts, options.ignoreHashes)
+    return res
+  } catch (error) {
+    return { ok: false, data: null, error }
+  }
+}
+
+export const guardAsync = guard
 
 // --- helper ---
 export async function sanitize(input: string | string[], options?: GuardOptions) {
