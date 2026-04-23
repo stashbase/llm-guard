@@ -54,6 +54,7 @@ export type GuardOptions = {
 type GuardConfig = {
   apiKey: string
   enabled?: boolean
+  sampleRate?: number
   baseUrl?: string
   timeoutMs?: number
   retries?: number
@@ -170,7 +171,9 @@ export async function guard(
   if (texts.length === 0) {
     return result
   }
-  const rate = Math.max(0, Math.min(1, options.sampleRate ?? 1))
+  const rawRate = options.sampleRate ?? config?.sampleRate ?? 1
+  const normalizedRate = typeof rawRate === 'number' && Number.isFinite(rawRate) ? rawRate : 1
+  const rate = Math.max(0, Math.min(1, normalizedRate))
   if (rate < 1 && Math.random() > rate) {
     return result
   }

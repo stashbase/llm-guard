@@ -241,6 +241,34 @@ describe('guard + OpenAI prompt flow', () => {
     expect(sendApiRequestMock).not.toHaveBeenCalled()
   })
 
+  it('uses global sampleRate from initGuard when per-call sampleRate is not provided', async () => {
+    initGuard({ apiKey: 'guard-key', sampleRate: 0 })
+    sendApiRequestMock.mockResolvedValue({
+      ok: true,
+      data: { has_secret: false, findings: [] },
+      error: null,
+    })
+
+    await guard('text1')
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(sendApiRequestMock).not.toHaveBeenCalled()
+  })
+
+  it('falls back to default sampling when sampleRate is invalid at runtime', async () => {
+    initGuard({ apiKey: 'guard-key' })
+    sendApiRequestMock.mockResolvedValue({
+      ok: true,
+      data: { has_secret: false, findings: [] },
+      error: null,
+    })
+
+    await guard('text1', { sampleRate: Number.NaN as unknown as number })
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(sendApiRequestMock).toHaveBeenCalledTimes(1)
+  })
+
   it('guards user input and model output in chat flow', async () => {
     initGuard({ apiKey: 'guard-key' })
     sendApiRequestMock
