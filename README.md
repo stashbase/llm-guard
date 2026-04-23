@@ -34,26 +34,6 @@ if (result.ok && result.data?.hasSecret) {
 }
 ```
 
-## Extractor Utility
-```ts
-import { guard, extractTexts } from '@stashbase/llm-guard'
-
-const messages = [
-  { role: 'user', content: 'hello' },
-  { role: 'assistant', content: [{ type: 'text', text: 'world' }] },
-]
-
-const texts = extractTexts(messages)
-
-guard(texts, {
-  onResult: (res) => {
-    if (res.hasSecret) {
-      console.warn('Secret detected in messages')
-    }
-  },
-})
-```
-
 ## Context Example
 
 ```ts
@@ -81,14 +61,8 @@ guard('User prompt text', {
 - `scan(input, options?)`
   - Blocking scan.
   - Returns `{ ok, data, error }`.
-- `guardAny(input, options?)`
-  - Non-blocking scan for unknown/structured LLM payloads (auto-normalizes with `extractTexts`).
-- `scanAny(input, options?)`
-  - Blocking scan for unknown/structured LLM payloads (auto-normalizes with `extractTexts`).
 - `flush()`
   - Waits for all in-flight `guard()` scans to settle.
-- `extractTexts(input)`
-  - Optional utility for normalizing common LLM message formats into `string[]`.
 
 ## Notes
 

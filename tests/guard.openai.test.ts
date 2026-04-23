@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import type OpenAI from 'openai'
-import { extractTexts, guard, initGuard, scan } from '../src/index'
+import { guard, initGuard, scan } from '../src/index'
 
 describe('guard with OpenAI types', () => {
   beforeEach(() => {
