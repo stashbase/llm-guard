@@ -37,7 +37,7 @@ if (result.ok && result.data?.hasSecret) {
 ## Context Example
 
 ```ts
-await guard('User prompt text', {
+guard('User prompt text', {
   context: { chatId: 'chat-123', userId: 42 },
   onResult: (res, ctx) => {
     if (res.hasSecret) {
@@ -99,6 +99,6 @@ const messages = [
   { role: 'assistant', content: [{ type: 'text', text: 'world' }] },
 ]
 
-await guardAny(messages)
+guardAny(messages)
 const res = await scanAny(messages)
 ```
