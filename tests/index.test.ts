@@ -227,6 +227,43 @@ describe('guard + OpenAI prompt flow', () => {
     })
   })
 
+  it('detects secrets in llm output text', async () => {
+    initGuard({ apiKey: 'guard-key' })
+    sendApiRequestMock.mockResolvedValue({
+      ok: true,
+      data: {
+        has_secret: true,
+        findings: [
+          {
+            text_index: 0,
+            category: 'api_key',
+            severity: 'high',
+            preview: 'sk-***',
+            value_sha256: 'abc123',
+            range: { start_line: 1, end_line: 1 },
+          },
+        ],
+      },
+      error: null,
+    })
+
+    const onResult = vi.fn()
+    const llmOutput = 'The key is sk-test-123'
+    await guard(() => llmOutput, { onResult })
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(sendApiRequestMock).toHaveBeenCalledWith({
+      method: 'POST',
+      path: '/v1/scan/text',
+      data: {
+        texts: [llmOutput],
+        ignore_hashes: undefined,
+      },
+    })
+    expect(onResult).toHaveBeenCalledTimes(1)
+    expect(onResult.mock.calls[0][0].hasSecret).toBe(true)
+  })
+
   it('skips scanning when sampleRate is 0', async () => {
     initGuard({ apiKey: 'guard-key' })
     sendApiRequestMock.mockResolvedValue({
