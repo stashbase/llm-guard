@@ -237,5 +237,3 @@ export async function scan(
     return { ok: false, data: null, error }
   }
 }
-
-export const guardAsync = guard
