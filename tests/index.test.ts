@@ -14,6 +14,7 @@ vi.mock('../src/http/client', () => {
 import { guard, initGuard } from '../src/index'
 
 type OpenAIClientLike = Pick<OpenAI, 'responses'>
+type OpenAIChatClientLike = Pick<OpenAI, 'chat'>
 
 const callOpenAIWithGuard = async (prompt: string, openai: OpenAIClientLike) => {
   const scannedPrompt = await guard(prompt, { async: false })
@@ -22,6 +23,28 @@ const callOpenAIWithGuard = async (prompt: string, openai: OpenAIClientLike) => 
     model: 'gpt-4o-mini',
     input: scannedPrompt,
   } as never)
+}
+
+const callChatRouteWithGuard = async (message: string, openai: OpenAIChatClientLike) => {
+  const userInput = message
+
+  await guard(() => userInput, {
+    onResult: (r) => {
+      if (r.hasLeak) {
+        console.warn('User sent possible secret')
+      }
+    },
+  })
+
+  const aiRes = await openai.chat.completions.create({
+    model: 'gpt-4o-mini',
+    messages: [{ role: 'user', content: userInput }],
+  } as never)
+
+  const output = aiRes.choices[0]?.message?.content ?? ''
+  await guard(() => output)
+
+  return { message: output }
 }
 
 describe('guard + OpenAI prompt flow', () => {
@@ -98,5 +121,70 @@ describe('guard + OpenAI prompt flow', () => {
       model: 'gpt-4o-mini',
       input: prompt,
     })
+  })
+
+  it('guards user input and model output in chat flow', async () => {
+    initGuard({ apiKey: 'guard-key' })
+    sendApiRequestMock
+      .mockResolvedValueOnce({
+        ok: true,
+        data: {
+          has_leak: true,
+          findings: [
+            {
+              text_index: 0,
+              category: 'api_key',
+              severity: 'high',
+              preview: 'sk-***',
+              value_sha256: 'abc123',
+              range: { start_line: 1, end_line: 1 },
+            },
+          ],
+        },
+        error: null,
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        data: { has_leak: false, findings: [] },
+        error: null,
+      })
+
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const openai = {
+      chat: {
+        completions: {
+          create: vi.fn().mockResolvedValue({
+            choices: [{ message: { content: 'Safe model output' } }],
+          }),
+        },
+      },
+    } as unknown as OpenAIChatClientLike
+
+    await expect(callChatRouteWithGuard('my secret is sk-test-123', openai)).resolves.toEqual({
+      message: 'Safe model output',
+    })
+
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(sendApiRequestMock).toHaveBeenCalledTimes(2)
+    expect(sendApiRequestMock).toHaveBeenNthCalledWith(1, {
+      method: 'POST',
+      path: '/scan/text',
+      data: {
+        texts: ['my secret is sk-test-123'],
+        ignore_hashes: undefined,
+      },
+    })
+    expect(sendApiRequestMock).toHaveBeenNthCalledWith(2, {
+      method: 'POST',
+      path: '/scan/text',
+      data: {
+        texts: ['Safe model output'],
+        ignore_hashes: undefined,
+      },
+    })
+    expect(warnSpy).toHaveBeenCalledWith('User sent possible secret')
+
+    warnSpy.mockRestore()
   })
 })
