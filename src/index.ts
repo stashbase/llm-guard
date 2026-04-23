@@ -16,7 +16,6 @@ export type ScanFinding = {
     startLine: number
     endLine: number
   }
-  value?: string
 }
 
 export type ScanResult = {
@@ -36,7 +35,6 @@ type ScanTextApiResponse = {
       start_line: number
       end_line: number
     }
-    value?: string
   }>
 }
 
@@ -152,7 +150,6 @@ function mapResponse(res: any): ScanResult {
         startLine: f.range?.start_line ?? f.range?.startLine ?? 1,
         endLine: f.range?.end_line ?? f.range?.endLine ?? 1,
       },
-      value: f.value,
     })),
   }
 }
