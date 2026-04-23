@@ -92,7 +92,7 @@ describe('guard inline config', () => {
       }, { onError })
     ).rejects.toThrow('input failed')
     expect(onError).toHaveBeenCalledTimes(1)
-    expect(onError).toHaveBeenCalledWith(inputError)
+    expect(onError).toHaveBeenCalledWith(inputError, undefined)
     expect(sendApiRequestMock).not.toHaveBeenCalled()
   })
 

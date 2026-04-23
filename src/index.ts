@@ -39,10 +39,11 @@ type ScanTextApiResponse = {
   }>
 }
 
-export type GuardOptions = {
+export type GuardOptions<TContext = Record<string, unknown>> = {
   ignoreHashes?: string[]
-  onResult?: (res: ScanResult) => void
-  onError?: (error: unknown) => void
+  onResult?: (res: ScanResult, context: TContext | undefined) => void
+  onError?: (error: unknown, context: TContext | undefined) => void
+  context?: TContext
   sampleRate?: number // value between 0 and 1, default = 1
   apiKey?: string
   baseUrl?: string
@@ -117,7 +118,7 @@ const toTexts = (input: string | string[]) => {
   return Array.isArray(input) ? input.map(String) : [String(input)]
 }
 
-const createLocalClient = (options?: GuardOptions) => {
+const createLocalClient = <TContext = Record<string, unknown>>(options?: GuardOptions<TContext>) => {
   if (!options?.apiKey) {
     return null
   }
@@ -164,15 +165,15 @@ function mapResponse(res: any): ScanResult {
  * @param options - Guard behavior options, callbacks, and optional inline client config.
  * @returns The resolved original input.
  */
-export async function guard(
+export async function guard<TContext = Record<string, unknown>>(
   input: string | string[] | (() => string | string[] | Promise<string | string[]>),
-  options: GuardOptions = {}
+  options: GuardOptions<TContext> = {}
 ): Promise<string | string[]> {
   let result: string | string[]
   try {
     result = await resolveInput(input)
   } catch (err) {
-    options.onError?.(err)
+    options.onError?.(err, options.context)
     throw err
   }
 
@@ -198,7 +199,7 @@ export async function guard(
       if (res.ok && res.data) {
         if (res.data.hasSecret) {
           if (options.onResult) {
-            options.onResult(res.data)
+            options.onResult(res.data, options.context)
           } else {
             console.warn(
               '⚠️ Potential secret detected:',
@@ -209,10 +210,10 @@ export async function guard(
         return
       }
 
-      options.onError?.(res.error)
+      options.onError?.(res.error, options.context)
     })
     .catch((err) => {
-      options.onError?.(err)
+      options.onError?.(err, options.context)
     })
 
   return result

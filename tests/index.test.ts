@@ -165,7 +165,7 @@ describe('guard + OpenAI prompt flow', () => {
     await new Promise((resolve) => setTimeout(resolve, 0))
 
     expect(onError).toHaveBeenCalledTimes(1)
-    expect(onError).toHaveBeenCalledWith(apiError)
+    expect(onError).toHaveBeenCalledWith(apiError, undefined)
   })
 
   it('calls onError when async scan throws', async () => {
@@ -178,7 +178,7 @@ describe('guard + OpenAI prompt flow', () => {
     await new Promise((resolve) => setTimeout(resolve, 0))
 
     expect(onError).toHaveBeenCalledTimes(1)
-    expect(onError).toHaveBeenCalledWith(thrownError)
+    expect(onError).toHaveBeenCalledWith(thrownError, undefined)
   })
 
   it('blocks execution until scan completes in sync mode', async () => {
@@ -262,6 +262,36 @@ describe('guard + OpenAI prompt flow', () => {
     })
     expect(onResult).toHaveBeenCalledTimes(1)
     expect(onResult.mock.calls[0][0].hasSecret).toBe(true)
+  })
+
+  it('propagates custom context to callbacks', async () => {
+    initGuard({ apiKey: 'guard-key' })
+    sendApiRequestMock.mockResolvedValue({
+      ok: true,
+      data: {
+        has_secret: true,
+        findings: [
+          {
+            text_index: 0,
+            category: 'api_key',
+            severity: 'high',
+            preview: 'sk-***',
+            value_sha256: 'abc123',
+            range: { start_line: 1, end_line: 1 },
+          },
+        ],
+      },
+      error: null,
+    })
+
+    const context = { chatId: 'chat-1', userId: 'user-1' }
+    const onResult = vi.fn()
+    await guard('secret sk-test', { context, onResult })
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(onResult).toHaveBeenCalledTimes(1)
+    expect(onResult.mock.calls[0][0].hasSecret).toBe(true)
+    expect(onResult.mock.calls[0][1]).toEqual(context)
   })
 
   it('skips scanning when sampleRate is 0', async () => {
