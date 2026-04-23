@@ -140,7 +140,7 @@ const createLocalClient = (options?: ClientOverrides) => {
 }
 
 // --- camelCase mapping ---
-function mapResponse(res: any): ScanResult {
+function mapResponse(res: ScanTextApiResponse): ScanResult {
   const findings = Array.isArray(res.findings) ? res.findings : []
 
   return {
