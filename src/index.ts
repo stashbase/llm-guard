@@ -202,11 +202,6 @@ export async function guard<TContext = Record<string, unknown>>(
         if (res.data.hasSecret) {
           if (options.onResult) {
             options.onResult(res.data, options.context)
-          } else {
-            console.warn(
-              '⚠️ Potential secret detected:',
-              res.data.findings.map((f) => `${f.category} (${f.preview})`).join(', ')
-            )
           }
         }
         return
