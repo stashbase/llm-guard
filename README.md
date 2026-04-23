@@ -16,7 +16,7 @@ import { initGuard, guard, scan } from '@stashbase/llm-guard'
 initGuard({ apiKey: process.env.STASHBASE_API_KEY! })
 
 // non-blocking (fire-and-forget)
-await guard('User prompt text', {
+guard('User prompt text', {
   onResult: (res) => {
     if (res.hasSecret) {
       console.warn('Secret detected')
@@ -32,6 +32,26 @@ const result = await scan('Model output text')
 if (result.ok && result.data?.hasSecret) {
   console.warn('Secret detected in output')
 }
+```
+
+## Extractor Utility
+```ts
+import { guard, extractTexts } from '@stashbase/llm-guard'
+
+const messages = [
+  { role: 'user', content: 'hello' },
+  { role: 'assistant', content: [{ type: 'text', text: 'world' }] },
+]
+
+const texts = extractTexts(messages)
+
+guard(texts, {
+  onResult: (res) => {
+    if (res.hasSecret) {
+      console.warn('Secret detected in messages')
+    }
+  },
+})
 ```
 
 ## Context Example
