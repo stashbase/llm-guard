@@ -2,7 +2,8 @@ import { HttpClient } from './http/client'
 import { ApiResponse } from './http/response'
 export { extractTexts } from './normalize'
 
-const NOT_INITIALIZED_ERROR = 'llm-guard not initialized. Call initGuard({ apiKey }) first.'
+const NOT_INITIALIZED_ERROR =
+  'llm-guard not initialized. Call initGuard({ apiKey }) or pass apiKey in options.'
 
 // --- types ---
 export type ScanFinding = {
