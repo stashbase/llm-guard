@@ -28,32 +28,6 @@ export type HttpRequestHookContext = {
   data?: unknown
 }
 
-export type HttpBeforeRequestHookContext = HttpRequestHookContext
-export type HttpAfterResponseHookContext = HttpRequestHookContext & { response: Response }
-export type HttpErrorHookContext = HttpRequestHookContext & { error: unknown }
-
-export type HttpClientHooks = {
-  beforeRequest?: (context: HttpBeforeRequestHookContext) => void | Promise<void>
-  afterResponse?: (context: HttpAfterResponseHookContext) => void | Promise<void>
-  onError?: (context: HttpErrorHookContext) => void | Promise<void>
-}
-
-export type HttpHookName = keyof HttpClientHooks
-
-export class HookExecutionError extends Error {
-  public readonly hook: HttpHookName
-  public readonly originalError: unknown
-
-  constructor(hook: HttpHookName, originalError: unknown) {
-    const causeMessage =
-      originalError instanceof Error ? originalError.message : 'Unknown hook error'
-    super(`Transport hook "${hook}" failed: ${causeMessage}`)
-    this.name = 'HookExecutionError'
-    this.hook = hook
-    this.originalError = originalError
-  }
-}
-
 export type HttpClientConfig = {
   baseUrl?: string
   version?: string
@@ -207,10 +181,6 @@ export class HttpClient {
       const formattedResponse = toCamelCase(response)
       return responseSuccess(formattedResponse)
     } catch (error) {
-      if (error instanceof HookExecutionError) {
-        return responseFailure(error as E)
-      }
-
       const formattedError = toCamelCase(error)
       const apiError = createApiErrorFromResponse<E>(formattedError)
       return responseFailure(apiError)
