@@ -78,4 +78,14 @@ describe('extractTexts', () => {
 
     expect(extractTexts(cyclic)).toEqual(['hello'])
   })
+
+  it('deduplicates repeated text values', () => {
+    const payload = {
+      content: 'same',
+      text: 'same',
+      messages: [{ content: 'same' }, { content: 'other' }],
+    }
+
+    expect(extractTexts(payload)).toEqual(['same', 'other'])
+  })
 })

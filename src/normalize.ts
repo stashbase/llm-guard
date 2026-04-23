@@ -64,5 +64,6 @@ const extractTextsInternal = (input: unknown, seen: WeakSet<object>): string[] =
 }
 
 export function extractTexts(input: unknown): string[] {
-  return extractTextsInternal(input, new WeakSet())
+  const result = extractTextsInternal(input, new WeakSet())
+  return [...new Set(result)]
 }
