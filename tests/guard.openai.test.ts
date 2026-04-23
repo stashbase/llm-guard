@@ -6,7 +6,7 @@ describe('guard with OpenAI types', () => {
   beforeEach(() => {
     initGuard({
       apiKey: process.env.LLM_GUARD_API_KEY ?? '',
-      baseUrl: 'http://localhost:5000', // or mocked backend
+      baseUrl: process.env.DEV_API_URL, // or mocked backend
     })
   })
 
