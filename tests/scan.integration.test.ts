@@ -33,8 +33,6 @@ describeIntegration('scan text integration', () => {
       },
     })
 
-    console.log(res)
-
     if (!res.ok) {
       throw new Error(`scan request failed: ${JSON.stringify(res.error)}`)
     }
@@ -44,14 +42,12 @@ describeIntegration('scan text integration', () => {
     expect(res.data).not.toBeNull()
 
     const data = res.data as {
-      hasLeak: boolean
       findings: Array<{
         category: string
         preview: string
       }>
     }
 
-    expect(data.hasLeak).toBe(true)
     expect(Array.isArray(data.findings)).toBe(true)
     expect(data.findings.length).toBeGreaterThan(0)
     expect(typeof data.findings[0]?.category).toBe('string')

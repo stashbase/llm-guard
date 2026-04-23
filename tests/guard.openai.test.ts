@@ -48,15 +48,15 @@ describe('guard with OpenAI types', () => {
     ])
 
     if (callbackResult?.type === 'result') {
-      const res = callbackResult.payload as { hasLeak: boolean }
-      expect(res.hasLeak).toBe(true)
+      const res = callbackResult.payload as { hasSecret: boolean }
+      expect(res.hasSecret).toBe(true)
     } else if (callbackResult?.type === 'error') {
       console.log('Guard error:', callbackResult.payload)
     } else {
       const res = await scan(() => content)
       expect(res.ok).toBe(true)
       if (res.data) {
-        expect(res.data.hasLeak).toBe(false)
+        expect(res.data.hasSecret).toBe(false)
       }
     }
 

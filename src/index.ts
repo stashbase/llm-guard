@@ -18,12 +18,12 @@ export type ScanFinding = {
 }
 
 export type ScanResult = {
-  hasLeak: boolean
+  hasSecret: boolean
   findings: ScanFinding[]
 }
 
 type ScanTextApiResponse = {
-  has_leak: boolean
+  has_secret?: boolean
   findings: Array<{
     text_index: number
     category: string
@@ -130,7 +130,7 @@ function mapResponse(res: any): ScanResult {
   const findings = Array.isArray(res.findings) ? res.findings : []
 
   return {
-    hasLeak: (res.has_leak ?? res.hasLeak) === true,
+    hasSecret: findings.length > 0,
     findings: findings.map((f: any) => ({
       textIndex: f.text_index ?? f.textIndex,
       category: f.category,
@@ -173,12 +173,12 @@ export async function guard(
   scanText(texts, options.ignoreHashes, localClient ?? undefined)
     .then((res) => {
       if (res.ok && res.data) {
-        if (res.data.hasLeak) {
+        if (res.data.hasSecret) {
           if (options.onResult) {
             options.onResult(res.data)
           } else {
             console.warn(
-              '⚠️ Potential secret leak detected:',
+              '⚠️ Potential secret detected:',
               res.data.findings.map((f) => `${f.category} (${f.preview})`).join(', ')
             )
           }

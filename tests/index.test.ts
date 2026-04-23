@@ -30,7 +30,7 @@ const callChatRouteWithGuard = async (message: string, openai: OpenAIChatClientL
 
   await guard(() => userInput, {
     onResult: (r) => {
-      if (r.hasLeak) {
+      if (r.hasSecret) {
         console.warn('User sent possible secret')
       }
     },
@@ -56,7 +56,7 @@ describe('guard + OpenAI prompt flow', () => {
     initGuard({ apiKey: 'guard-key' })
     sendApiRequestMock.mockResolvedValue({
       ok: true,
-      data: { has_leak: false, findings: [] },
+      data: { has_secret: false, findings: [] },
       error: null,
     })
 
@@ -128,7 +128,7 @@ describe('guard + OpenAI prompt flow', () => {
     sendApiRequestMock.mockResolvedValue({
       ok: true,
       data: {
-        has_leak: true,
+        has_secret: true,
         findings: [
           {
             text_index: 0,
@@ -148,7 +148,7 @@ describe('guard + OpenAI prompt flow', () => {
     await new Promise((resolve) => setTimeout(resolve, 0))
 
     expect(onResult).toHaveBeenCalledTimes(1)
-    expect(onResult.mock.calls[0][0].hasLeak).toBe(true)
+    expect(onResult.mock.calls[0][0].hasSecret).toBe(true)
   })
 
   it('calls onError when async scan returns API failure response', async () => {
@@ -189,7 +189,7 @@ describe('guard + OpenAI prompt flow', () => {
       order.push('scan')
       return {
         ok: true,
-        data: { has_leak: false, findings: [] },
+        data: { has_secret: false, findings: [] },
         error: null,
       }
     })
@@ -210,7 +210,7 @@ describe('guard + OpenAI prompt flow', () => {
     initGuard({ apiKey: 'guard-key' })
     sendApiRequestMock.mockResolvedValue({
       ok: true,
-      data: { has_leak: false, findings: [] },
+      data: { has_secret: false, findings: [] },
       error: null,
     })
 
@@ -233,7 +233,7 @@ describe('guard + OpenAI prompt flow', () => {
       .mockResolvedValueOnce({
         ok: true,
         data: {
-          has_leak: true,
+          has_secret: true,
           findings: [
             {
               text_index: 0,
@@ -249,7 +249,7 @@ describe('guard + OpenAI prompt flow', () => {
       })
       .mockResolvedValueOnce({
         ok: true,
-        data: { has_leak: false, findings: [] },
+        data: { has_secret: false, findings: [] },
         error: null,
       })
 

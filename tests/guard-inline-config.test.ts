@@ -21,7 +21,7 @@ describe('guard inline config', () => {
   it('works without initGuard when apiKey is provided in options', async () => {
     const sendApiRequestMock = vi.fn().mockResolvedValue({
       ok: true,
-      data: { has_leak: false, findings: [] },
+      data: { has_secret: false, findings: [] },
       error: null,
     })
     const { guard } = await loadGuardModule(sendApiRequestMock)
@@ -48,7 +48,7 @@ describe('guard inline config', () => {
   it('scan supports inline client config without initGuard', async () => {
     const sendApiRequestMock = vi.fn().mockResolvedValue({
       ok: true,
-      data: { has_leak: false, findings: [] },
+      data: { has_secret: false, findings: [] },
       error: null,
     })
     const { scan } = await loadGuardModule(sendApiRequestMock)
