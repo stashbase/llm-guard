@@ -63,7 +63,11 @@ type GuardConfig = {
 let config: GuardConfig | null = null
 let client: HttpClient | null = null
 
-// --- init ---
+/**
+ * Initializes global SDK configuration used by `guard` and `scan`.
+ *
+ * @param input - Global configuration with API key and optional defaults.
+ */
 export function initGuard(input: GuardConfig) {
   config = input
   client = new HttpClient({
@@ -149,7 +153,17 @@ function mapResponse(res: any): ScanResult {
   }
 }
 
-// --- core guard (non-blocking) ---
+/**
+ * Runs secret scanning in fire-and-forget mode and returns the original input.
+ *
+ * This function never blocks on network scanning. Results are delivered through callbacks:
+ * - `onResult` when a scan succeeds and detects secrets
+ * - `onError` when scan execution fails
+ *
+ * @param input - A string, string array, or resolver returning either.
+ * @param options - Guard behavior options, callbacks, and optional inline client config.
+ * @returns The resolved original input.
+ */
 export async function guard(
   input: string | string[] | (() => string | string[] | Promise<string | string[]>),
   options: GuardOptions = {}
@@ -204,6 +218,15 @@ export async function guard(
   return result
 }
 
+/**
+ * Runs blocking secret scanning and returns API-style output.
+ *
+ * No callback hooks are used in this mode.
+ *
+ * @param input - A string, string array, or resolver returning either.
+ * @param options - Scan options with optional inline client config.
+ * @returns `{ ok, data, error }` where `data` is present only when `ok` is true.
+ */
 export async function scan(
   input: string | string[] | (() => string | string[] | Promise<string | string[]>),
   options: {
