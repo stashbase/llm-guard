@@ -118,7 +118,9 @@ const toTexts = (input: string | string[]) => {
   return Array.isArray(input) ? input.map(String) : [String(input)]
 }
 
-const createLocalClient = <TContext = Record<string, unknown>>(options?: GuardOptions<TContext>) => {
+const createLocalClient = <TContext = Record<string, unknown>>(
+  options?: GuardOptions<TContext>
+) => {
   if (!options?.apiKey) {
     return null
   }
