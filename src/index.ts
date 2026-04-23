@@ -1,6 +1,8 @@
 import { HttpClient } from './http/client'
 import { ApiResponse } from './http/response'
 
+const NOT_INITIALIZED_ERROR = 'llm-guard not initialized. Call initGuard({ apiKey }) first.'
+
 // --- types ---
 export type ScanFinding = {
   textIndex: number
@@ -79,7 +81,7 @@ async function scanText(
 ): Promise<ApiResponse<ScanResult, any>> {
   const activeClient = overrideClient ?? client
   if (!activeClient) {
-    throw new Error('llm-guard not initialized. Call initGuard({ apiKey }) first.')
+    throw new Error(NOT_INITIALIZED_ERROR)
   }
 
   const res = await activeClient.sendApiRequest<ScanTextApiResponse>({
@@ -152,15 +154,18 @@ export async function guard(
     result = await resolveInput(input)
   } catch (err) {
     options.onError?.(err)
-    return ''
+    throw err
   }
 
-  if (config?.enabled === false) {
+  const localClient = createLocalClient(options)
+  if (config?.enabled === false && !localClient) {
     return result
   }
 
-  const texts = toTexts(result)
-  const localClient = createLocalClient(options)
+  const texts = toTexts(result).filter((t) => t.trim().length > 0)
+  if (texts.length === 0) {
+    return result
+  }
 
   // fire-and-forget
   scanText(texts, options.ignoreHashes, localClient ?? undefined)
@@ -172,7 +177,7 @@ export async function guard(
           } else {
             console.warn(
               '⚠️ Potential secret leak detected:',
-              res.data.findings.map((f) => `${f.category}: ${f.preview}`).join(', ')
+              res.data.findings.map((f) => `${f.category} (${f.preview})`).join(', ')
             )
           }
         }
@@ -192,6 +197,10 @@ export async function scan(
   input: string | string[] | (() => string | string[] | Promise<string | string[]>),
   options: {
     ignoreHashes?: string[]
+    apiKey?: string
+    baseUrl?: string
+    timeoutMs?: number
+    retries?: number
   } = {}
 ): Promise<{
   ok: boolean
@@ -200,13 +209,18 @@ export async function scan(
 }> {
   try {
     const result = await resolveInput(input)
+    const localClient = createLocalClient(options)
 
-    if (config?.enabled === false) {
+    if (config?.enabled === false && !localClient) {
       return { ok: true, data: null, error: null }
     }
 
-    const texts = toTexts(result)
-    const res = await scanText(texts, options.ignoreHashes)
+    const texts = toTexts(result).filter((t) => t.trim().length > 0)
+    if (texts.length === 0) {
+      return { ok: true, data: null, error: null }
+    }
+
+    const res = await scanText(texts, options.ignoreHashes, localClient ?? undefined)
     return res
   } catch (error) {
     return { ok: false, data: null, error }
@@ -214,8 +228,3 @@ export async function scan(
 }
 
 export const guardAsync = guard
-
-// --- helper ---
-export async function sanitize(input: string | string[], options?: GuardOptions) {
-  return guard(input, options)
-}
