@@ -1,7 +1,7 @@
 import fetchWithRetry from './retry'
-import { createApiErrorFromResponse } from '../errors'
 import { responseFailure, responseSuccess } from './response'
 import { toCamelCase, toSnakeCase } from '../utils/serializer'
+import { createApiError } from '../errors'
 
 declare const __SDK_VERSION__: string
 declare const __SDK_DEV_API_URL__: string
@@ -182,7 +182,7 @@ export class HttpClient {
       return responseSuccess(formattedResponse)
     } catch (error) {
       const formattedError = toCamelCase(error)
-      const apiError = createApiErrorFromResponse<E>(formattedError)
+      const apiError = createApiError(formattedError)
       return responseFailure(apiError)
     }
   }
