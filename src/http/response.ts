@@ -1,5 +1,7 @@
+export type OpenErrorCode<TCode extends string> = TCode | (string & {})
+
 export type ApiError<TCode extends string = string> = {
-  code: TCode
+  code: OpenErrorCode<TCode>
   message: string
   details?: unknown
 }
