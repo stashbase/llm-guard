@@ -5,7 +5,7 @@ export type ApiError<TCode extends string = string> = {
 }
 
 export type ApiResponse<TData, TCode extends string = string> = {
-  ok: boolean | null
+  ok: boolean
   data: TData | null
   error: ApiError<TCode> | null
 }
