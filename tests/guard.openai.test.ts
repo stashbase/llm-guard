@@ -99,7 +99,9 @@ describe('guard with OpenAI types', () => {
 
             for (const r of res.findings) {
               console.log(
-                `Finding: ${r.preview} (severity: ${r.severity}, category: ${r.category}), range: ${r.range.startLine}-${r.range.endLine} in text index ${r.textIndex}`
+                `Finding: ${r.preview} (severity: ${r.severity}, category: ${r.category}), occurrences: ${r.occurrences
+                  .map((occurrence) => `${occurrence.startLine}-${occurrence.endLine}`)
+                  .join(', ')} in text index ${r.textIndex}`
               )
             }
             resolve({ type: 'result', payload: res })

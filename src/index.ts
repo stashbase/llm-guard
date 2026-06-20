@@ -11,10 +11,10 @@ export type ScanFinding = {
   severity: 'low' | 'medium' | 'high' | 'critical'
   preview: string
   valueSha256: string
-  range: {
+  occurrences: Array<{
     startLine: number
     endLine: number
-  }
+  }>
 }
 
 export type ScanResult = {
@@ -30,9 +30,17 @@ type ScanTextApiResponse = {
     severity: 'low' | 'medium' | 'high' | 'critical'
     preview: string
     value_sha256: string
-    range: {
-      start_line: number
-      end_line: number
+    occurrences?: Array<{
+      start_line?: number
+      end_line?: number
+      startLine?: number
+      endLine?: number
+    }>
+    range?: {
+      start_line?: number
+      end_line?: number
+      startLine?: number
+      endLine?: number
     }
   }>
 }
@@ -151,10 +159,14 @@ function mapResponse(res: ScanTextApiResponse): ScanResult {
       severity: f.severity,
       preview: f.preview,
       valueSha256: f.value_sha256 ?? f.valueSha256,
-      range: {
-        startLine: f.range?.start_line ?? f.range?.startLine ?? 1,
-        endLine: f.range?.end_line ?? f.range?.endLine ?? 1,
-      },
+      occurrences: (
+        Array.isArray(f.occurrences) && f.occurrences.length > 0
+          ? f.occurrences
+          : [f.range].filter(Boolean)
+      ).map((occurrence: any) => ({
+        startLine: occurrence?.start_line ?? occurrence?.startLine ?? 1,
+        endLine: occurrence?.end_line ?? occurrence?.endLine ?? 1,
+      })),
     })),
   }
 }
