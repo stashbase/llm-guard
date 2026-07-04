@@ -1,5 +1,6 @@
 import { HttpClient } from './http/client'
 import { ApiResponse } from './http/response'
+import { normalizeToTexts } from './normalize'
 
 const NOT_INITIALIZED_ERROR =
   'llm-guard not initialized. Call initGuard({ apiKey }) or pass apiKey in options.'
@@ -121,6 +122,14 @@ const resolveInput = async (
   return typeof input === 'function' ? await input() : input
 }
 
+const resolveAnyInput = async <TInput>(
+  input: TInput | (() => TInput | Promise<TInput>)
+): Promise<TInput> => {
+  return typeof input === 'function'
+    ? await (input as () => TInput | Promise<TInput>)()
+    : input
+}
+
 type ClientOverrides = {
   apiKey?: string
   baseUrl?: string
@@ -145,6 +154,41 @@ const createLocalClient = (options?: ClientOverrides) => {
       apiKey: options.apiKey,
     },
   })
+}
+
+const toNonEmptyTexts = (input: string | string[]) => {
+  return toTexts(input).filter((t) => t.trim().length > 0)
+}
+
+const scanResolvedTexts = async (
+  texts: string[],
+  options: {
+    ignoreHashes?: string[]
+    apiKey?: string
+    baseUrl?: string
+    timeoutMs?: number
+    retries?: number
+  } = {}
+): Promise<{
+  ok: boolean
+  data: ScanResult | null
+  error: unknown
+}> => {
+  const localClient = createLocalClient(options)
+
+  if (config?.enabled === false && !localClient) {
+    return { ok: true, data: null, error: null }
+  }
+
+  if (texts.length === 0) {
+    return { ok: true, data: null, error: null }
+  }
+
+  try {
+    return await scanText(texts, options.ignoreHashes, localClient ?? undefined)
+  } catch (error) {
+    return { ok: false, data: null, error }
+  }
 }
 
 // --- camelCase mapping ---
@@ -199,7 +243,7 @@ export async function guard<TContext = Record<string, unknown>>(
     return result
   }
 
-  const texts = toTexts(result).filter((t) => t.trim().length > 0)
+  const texts = toNonEmptyTexts(result)
   if (texts.length === 0) {
     return result
   }
@@ -259,19 +303,61 @@ export async function scan(
 }> {
   try {
     const result = await resolveInput(input)
-    const localClient = createLocalClient(options)
+    return await scanResolvedTexts(toNonEmptyTexts(result), options)
+  } catch (error) {
+    return { ok: false, data: null, error }
+  }
+}
 
-    if (config?.enabled === false && !localClient) {
-      return { ok: true, data: null, error: null }
-    }
+/**
+ * Runs non-blocking secret scanning on nested JSON-like payloads and returns the original input.
+ *
+ * `guardAny()` extracts all non-empty string values from arrays/objects before scanning.
+ * This is useful for chat messages, tool payloads, and structured LLM responses.
+ */
+export async function guardAny<TInput, TContext = Record<string, unknown>>(
+  input: TInput | (() => TInput | Promise<TInput>),
+  options: GuardOptions<TContext>
+): Promise<TInput> {
+  let result: TInput
+  try {
+    result = await resolveAnyInput(input)
+  } catch (err) {
+    options.onError?.(err, options.context)
+    throw err
+  }
 
-    const texts = toTexts(result).filter((t) => t.trim().length > 0)
-    if (texts.length === 0) {
-      return { ok: true, data: null, error: null }
-    }
+  const texts = normalizeToTexts(result)
+  if (texts.length === 0) {
+    return result
+  }
 
-    const res = await scanText(texts, options.ignoreHashes, localClient ?? undefined)
-    return res
+  await guard(texts, options)
+  return result
+}
+
+/**
+ * Runs blocking secret scanning on nested JSON-like payloads.
+ *
+ * `scanAny()` extracts all non-empty string values from arrays/objects before scanning.
+ */
+export async function scanAny<TInput>(
+  input: TInput | (() => TInput | Promise<TInput>),
+  options: {
+    ignoreHashes?: string[]
+    apiKey?: string
+    baseUrl?: string
+    timeoutMs?: number
+    retries?: number
+  } = {}
+): Promise<{
+  ok: boolean
+  data: ScanResult | null
+  error: unknown
+}> {
+  try {
+    const result = await resolveAnyInput(input)
+    return await scanResolvedTexts(normalizeToTexts(result), options)
   } catch (error) {
     return { ok: false, data: null, error }
   }
