@@ -11,7 +11,7 @@ vi.mock('../src/http/client', () => {
   }
 })
 
-import { flush, guard, initGuard, scan } from '../src/index'
+import { flush, guard, guardAny, initGuard, scan, scanAny } from '../src/index'
 
 type OpenAIClientLike = Pick<OpenAI, 'responses'>
 type OpenAIChatClientLike = Pick<OpenAI, 'chat'>
@@ -250,6 +250,74 @@ describe('guard + OpenAI prompt flow', () => {
         ignore_hashes: undefined,
       },
     })
+  })
+
+  it('guardAny extracts nested strings from structured payloads', async () => {
+    initGuard({ apiKey: 'guard-key' })
+    sendApiRequestMock.mockResolvedValue({
+      ok: true,
+      data: { has_secret: false, findings: [] },
+      error: null,
+    })
+
+    const payload = {
+      role: 'assistant',
+      content: [
+        { type: 'text', text: 'hello' },
+        { type: 'tool_result', value: { summary: 'world', count: 2 } },
+      ],
+    }
+
+    await guardAny(payload, { onResult: () => {} })
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(sendApiRequestMock).toHaveBeenCalledWith({
+      method: 'POST',
+      path: '/v1/scan/text',
+      data: {
+        texts: ['assistant', 'text', 'hello', 'tool_result', 'world'],
+        ignore_hashes: undefined,
+      },
+    })
+  })
+
+  it('scanAny returns original API-style result for structured payloads', async () => {
+    initGuard({ apiKey: 'guard-key' })
+    sendApiRequestMock.mockResolvedValue({
+      ok: true,
+      data: {
+        has_secret: true,
+        findings: [
+          {
+            text_index: 1,
+            category: 'api_key',
+            severity: 'high',
+            preview: 'sk-***',
+            value_sha256: 'abc123',
+            occurrences: [{ start_line: 1, end_line: 1 }],
+          },
+        ],
+      },
+      error: null,
+    })
+
+    const res = await scanAny({
+      messages: [
+        { role: 'user', content: 'safe intro' },
+        { role: 'assistant', content: 'sk-test-123' },
+      ],
+    })
+
+    expect(sendApiRequestMock).toHaveBeenCalledWith({
+      method: 'POST',
+      path: '/v1/scan/text',
+      data: {
+        texts: ['user', 'safe intro', 'assistant', 'sk-test-123'],
+        ignore_hashes: undefined,
+      },
+    })
+    expect(res.ok).toBe(true)
+    expect(res.data?.hasSecret).toBe(true)
   })
 
   it('detects secrets in llm output text', async () => {

@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest'
 
 const apiKey = process.env.LLM_GUARD_API_KEY
+const runIntegrationTests = process.env.RUN_INTEGRATION_TESTS === '1'
 const baseUrl = (process.env.LLM_GUARD_BASE_URL ?? 'https://api.stashbase.dev').replace(/\/+$/, '')
-const describeIntegration = apiKey ? describe : describe.skip
+const describeIntegration = apiKey && runIntegrationTests ? describe : describe.skip
 
 describeIntegration('scan text integration', () => {
   it('sends a real request with a hardcoded secret and validates response', async () => {
