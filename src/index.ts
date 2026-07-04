@@ -31,9 +31,9 @@ type ScanTextApiResponse = {
     severity: 'low' | 'medium' | 'high' | 'critical'
     preview: string
     value_sha256: string
-    locations?: Array<{
-      start_line?: number
-      end_line?: number
+    locations: Array<{
+      start_line: number
+      end_line: number
     }>
   }>
 }
@@ -187,18 +187,15 @@ function mapResponse(res: ScanTextApiResponse): ScanResult {
 
   return {
     hasSecret: findings.length > 0,
-    findings: findings.map((f: any) => ({
-      textIndex: f.text_index ?? f.textIndex,
+    findings: findings.map((f) => ({
+      textIndex: f.text_index,
       category: f.category,
       severity: f.severity,
       preview: f.preview,
-      valueSha256: f.value_sha256 ?? f.valueSha256,
-      locations: (Array.isArray(f.locations) && f.locations.length > 0
-        ? f.locations
-        : [f.range].filter(Boolean)
-      ).map((location: any) => ({
-        startLine: location?.start_line ?? location?.startLine ?? 1,
-        endLine: location?.end_line ?? location?.endLine ?? 1,
+      valueSha256: f.value_sha256,
+      locations: f.locations.map((location) => ({
+        startLine: location.start_line,
+        endLine: location.end_line,
       })),
     })),
   }
