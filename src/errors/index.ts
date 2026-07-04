@@ -1,5 +1,4 @@
 import { ApiError } from '../http/response'
-import { SdkErrorCode, GlobalErrorCode } from '../types/errors'
 
 export const createApiError = <TCode extends string>(args: {
   code: TCode
@@ -13,12 +12,12 @@ export const createApiError = <TCode extends string>(args: {
   }
 }
 
-export const connectionFailedError: ApiError<SdkErrorCode> = createApiError({
+export const connectionFailedError = createApiError({
   code: 'server.connection_failed',
   message: 'Could not connect to the API server. Please try again later.',
 })
 
-export const serverTemporaryUnavailableError: ApiError<GlobalErrorCode> = createApiError({
+export const serverTemporaryUnavailableError = createApiError({
   code: 'server.temporary_unavailable',
   message: 'API service is temporarily unavailable. Please try again later.',
 })
