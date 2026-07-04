@@ -1,6 +1,6 @@
 {
   "name": "@stashbase/llm-guard",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "TypeScript SDK for detecting API keys, tokens, and other secrets in LLM prompts, completions, and AI workflows.",
   "repository": {
     "type": "git",
