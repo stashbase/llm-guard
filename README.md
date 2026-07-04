@@ -35,7 +35,9 @@ if (!result.ok) {
 }
 ```
 
-Use `scan()` when you need the result before continuing. Use `guard()` when you want to return the original input immediately and perform the scan in the background.
+Use `scan()` as the enforcement API when a possible secret leak must be prevented before continuing. `scan()` waits for the Stashbase scan result, so it fits decision points such as checking a prompt before sending it to an LLM or checking output before returning it to a user.
+
+Use `guard()` as the monitoring API when you want detection without adding request latency. `guard()` immediately returns the original input, performs scanning in the background, and reports findings through callbacks. It fits monitoring, alerting, logging, and analytics workflows.
 
 ```ts
 guard('User prompt text', {
@@ -88,10 +90,11 @@ await guard(output, {
 
 Use this package when you want to:
 
-- scan user prompts before sending them to an LLM
-- scan model output before returning it to users
-- add non-blocking background checks with callback hooks
-- scan structured payloads such as chat messages or tool results
+- use `scan()` to prevent a prompt containing secrets from being sent to an LLM
+- use `scan()` to prevent model output containing secrets from being returned to a user
+- use `guard()` to monitor prompts or completions in the background for alerting or audit logs
+- use `guard()` to add detection to production traffic where extra request latency is undesirable
+- scan structured payloads such as chat messages or tool results with `scanAny()` or `guardAny()`
 
 ## Context Example
 
@@ -114,19 +117,20 @@ guard('User prompt text', {
 - `initGuard(config)`
   - Sets global API config.
 - `guard(input, options?)`
-  - Non-blocking scan for `string` or `string[]`.
-  - Returns original input.
+  - Monitoring API for `string` or `string[]`.
+  - Returns original input immediately and scans in the background.
   - Supports callbacks (`onResult`, `onError`) and `sampleRate`.
 - `scan(input, options?)`
-  - Blocking scan for `string` or `string[]`.
-  - Returns `{ ok, data, error }`.
+  - Enforcement API for `string` or `string[]`.
+  - Waits for the scan result before returning `{ ok, data, error }`.
 - `guardAny(input, options?)`
-  - Non-blocking scan for nested JSON-like payloads.
+  - Monitoring API for nested JSON-like payloads.
   - Extracts non-empty string values from arrays and objects before scanning.
-  - Returns original input.
+  - Returns original input immediately and scans in the background.
 - `scanAny(input, options?)`
-  - Blocking scan for nested JSON-like payloads.
+  - Enforcement API for nested JSON-like payloads.
   - Extracts non-empty string values from arrays and objects before scanning.
+  - Waits for the scan result before returning `{ ok, data, error }`.
 - `flush()`
   - Waits for all in-flight `guard()` scans to settle.
 
