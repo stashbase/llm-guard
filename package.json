@@ -1,7 +1,7 @@
 {
   "name": "@stashbase/llm-guard",
   "version": "0.0.1",
-  "description": "TypeScript SDK for scanning LLM prompts and outputs for secrets with Stashbase",
+  "description": "TypeScript SDK for detecting API keys, tokens, and other secrets in LLM prompts, completions, and AI workflows.",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/stashbase/llm-guard.git"
@@ -37,15 +37,24 @@
   "keywords": [
     "llm",
     "ai",
+    "llm-security",
+    "ai-security",
+    "prompt",
+    "prompt-security",
+    "secret",
     "secrets",
     "secret-scanning",
-    "openai",
+    "api-key",
     "security",
     "guardrails",
     "stashbase"
   ],
   "author": "Stashbase",
   "license": "MIT",
+  "sideEffects": false,
+  "engines": {
+    "node": ">=18"
+  },
   "devDependencies": {
     "@types/node": "^25.9.3",
     "@typescript-eslint/eslint-plugin": "8.61.1",
