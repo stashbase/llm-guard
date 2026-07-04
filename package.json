@@ -1,7 +1,7 @@
 {
   "name": "@stashbase/llm-guard",
   "version": "0.1.0",
-  "description": "Stashbase LLM Guard",
+  "description": "TypeScript SDK for scanning LLM prompts and outputs for secrets with Stashbase",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/stashbase/llm-guard.git"
@@ -34,7 +34,16 @@
     "build": "tsup --config tsup.config.ts",
     "prepack": "npm run build"
   },
-  "keywords": [],
+  "keywords": [
+    "llm",
+    "ai",
+    "secrets",
+    "secret-scanning",
+    "openai",
+    "security",
+    "guardrails",
+    "stashbase"
+  ],
   "author": "Stashbase",
   "license": "MIT",
   "devDependencies": {
