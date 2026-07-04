@@ -12,7 +12,7 @@ export type ScanFinding = {
   severity: 'low' | 'medium' | 'high' | 'critical'
   preview: string
   valueSha256: string
-  occurrences: Array<{
+  locations: Array<{
     startLine: number
     endLine: number
   }>
@@ -31,18 +31,10 @@ type ScanTextApiResponse = {
     severity: 'low' | 'medium' | 'high' | 'critical'
     preview: string
     value_sha256: string
-    occurrences?: Array<{
+    locations?: Array<{
       start_line?: number
       end_line?: number
-      startLine?: number
-      endLine?: number
     }>
-    range?: {
-      start_line?: number
-      end_line?: number
-      startLine?: number
-      endLine?: number
-    }
   }>
 }
 
@@ -125,9 +117,7 @@ const resolveInput = async (
 const resolveAnyInput = async <TInput>(
   input: TInput | (() => TInput | Promise<TInput>)
 ): Promise<TInput> => {
-  return typeof input === 'function'
-    ? await (input as () => TInput | Promise<TInput>)()
-    : input
+  return typeof input === 'function' ? await (input as () => TInput | Promise<TInput>)() : input
 }
 
 type ClientOverrides = {
@@ -203,13 +193,12 @@ function mapResponse(res: ScanTextApiResponse): ScanResult {
       severity: f.severity,
       preview: f.preview,
       valueSha256: f.value_sha256 ?? f.valueSha256,
-      occurrences: (
-        Array.isArray(f.occurrences) && f.occurrences.length > 0
-          ? f.occurrences
-          : [f.range].filter(Boolean)
-      ).map((occurrence: any) => ({
-        startLine: occurrence?.start_line ?? occurrence?.startLine ?? 1,
-        endLine: occurrence?.end_line ?? occurrence?.endLine ?? 1,
+      locations: (Array.isArray(f.locations) && f.locations.length > 0
+        ? f.locations
+        : [f.range].filter(Boolean)
+      ).map((location: any) => ({
+        startLine: location?.start_line ?? location?.startLine ?? 1,
+        endLine: location?.end_line ?? location?.endLine ?? 1,
       })),
     })),
   }
