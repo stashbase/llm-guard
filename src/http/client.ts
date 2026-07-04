@@ -67,7 +67,7 @@ export class HttpClient {
 
     const headers = {
       'Content-Type': 'application/json',
-      'User-Agent': `stashbase/node-sdk/${version ?? VERSION}`,
+      'User-Agent': `stashbase/llm-guard/${version ?? VERSION}`,
     } as Record<string, string>
 
     if (apiKey) {
