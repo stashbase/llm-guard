@@ -1,0 +1,36 @@
+# Stashbase Agent Proxy profile.
+# Add only destinations the agent genuinely needs to contact.
+egress_hosts = ["*"]
+
+# Enable installed dependency and secret-scan hooks for this profile.
+# allow_hooks = ["dependency_check", "secret_scan"]
+
+# Optional: allow local test servers and Unix-socket IPC (macOS only).
+# Linux keeps loopback available for the embedded proxy; this setting has no effect there.
+# allow_network_listeners = true
+
+# Optional: protect sensitive files from agent reads and writes.
+# [filesystem]
+# deny_read = ["~/.ssh", "~/.aws", ".env"]
+# deny_write = ["~/.ssh", "~/.aws", ".git"]
+
+# Optional: non-sensitive config for the agent, stored in plaintext.
+# Credentials belong in [secrets]; values that look like one are flagged.
+# [config_env]
+# NODE_ENV = "development"
+# PORT = 3000
+
+# Optional named HTTP MCP server and tool allowlist.
+# [mcp_servers.example]
+# url = "https://mcp.example.com/mcp"
+# binding = "SECRET_NAME"
+# header = "X-API-Key"
+# value_template = "{value}"
+# allow_tools = ["search"]
+
+# Example: permit one read-only HTTP action for this credential.
+# [[secrets.SECRET_NAME.rules]]
+# effect = "allow"
+# hosts = ["api.example.com"]
+# methods = ["GET"]
+# paths = ["/v1/resource/*"]
